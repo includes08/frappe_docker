@@ -3,25 +3,29 @@ version: "3"
 services:
   backend:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     deploy:
       restart_policy:
         condition: on-failure
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
 
   configurator:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     deploy:
       restart_policy:
-        condition: none
+        condition: no
     entrypoint:
       - bash
       - -c
     # add redis_socketio for backward compatibility
     command:
       - >
-        ls -1 apps > sites/apps.txt;
+        ls -1 apps > /docker-date/erpnext/sites/apps.txt;
         bench set-config -g db_host $$DB_HOST;
         bench set-config -gp db_port $$DB_PORT;
         bench set-config -g redis_cache "redis://$$REDIS_CACHE";
@@ -35,17 +39,19 @@ services:
       REDIS_QUEUE: redis-queue:6379
       SOCKETIO_PORT: "9000"
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
 
   create-site:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     deploy:
       restart_policy:
-        condition: none
+        condition: no
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
     entrypoint:
       - bash
       - -c
@@ -55,22 +61,24 @@ services:
         wait-for-it -t 120 redis-cache:6379;
         wait-for-it -t 120 redis-queue:6379;
         export start=`date +%s`;
-        until [[ -n `grep -hs ^ sites/common_site_config.json | jq -r ".db_host // empty"` ]] && \
-          [[ -n `grep -hs ^ sites/common_site_config.json | jq -r ".redis_cache // empty"` ]] && \
-          [[ -n `grep -hs ^ sites/common_site_config.json | jq -r ".redis_queue // empty"` ]];
+        until [[ -n `grep -hs ^ /docker-date/erpnext/sites/common_site_config.json | jq -r ".db_host // empty"` ]] && \
+          [[ -n `grep -hs ^ /docker-date/erpnext/sites/common_site_config.json | jq -r ".redis_cache // empty"` ]] && \
+          [[ -n `grep -hs ^ /docker-date/erpnext/sites/common_site_config.json | jq -r ".redis_queue // empty"` ]];
         do
-          echo "Waiting for sites/common_site_config.json to be created";
+          echo "Waiting for /docker-date/erpnext/sites/common_site_config.json to be created";
           sleep 5;
           if (( `date +%s`-start > 120 )); then
-            echo "could not find sites/common_site_config.json with required keys";
+            echo "could not find /docker-date/erpnext/sites/common_site_config.json with required keys";
             exit 1
           fi
         done;
-        echo "sites/common_site_config.json found";
+        echo "/docker-date/erpnext/sites/common_site_config.json found";
         bench new-site --no-mariadb-socket --admin-password=admin --db-root-password=admin --install-app erpnext --set-default frontend;
 
   db:
     image: mariadb:10.6
+    networks:
+      - proxy
     healthcheck:
       test: mysqladmin ping -h localhost --password=admin
       interval: 1s
@@ -86,10 +94,12 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: admin
     volumes:
-      - db-data:/var/lib/mysql
+      - /docker-date/erpnext/db-data:/var/lib/mysql
 
   frontend:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     depends_on:
       - websocket
     deploy:
@@ -107,13 +117,15 @@ services:
       PROXY_READ_TIMEOUT: 120
       CLIENT_MAX_BODY_SIZE: 50m
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
     ports:
       - "8080:8080"
 
   queue-long:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     deploy:
       restart_policy:
         condition: on-failure
@@ -123,11 +135,13 @@ services:
       - --queue
       - long,default,short
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
 
   queue-short:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     deploy:
       restart_policy:
         condition: on-failure
@@ -137,27 +151,33 @@ services:
       - --queue
       - short,default
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
 
   redis-queue:
     image: redis:6.2-alpine
+    networks:
+      - proxy
     deploy:
       restart_policy:
         condition: on-failure
     volumes:
-      - redis-queue-data:/data
+      - /docker-date/erpnext/redis-queue-data:/data
 
   redis-cache:
     image: redis:6.2-alpine
+    networks:
+      - proxy
     deploy:
       restart_policy:
         condition: on-failure
     volumes:
-      - redis-cache-data:/data
+      - /docker-date/erpnext/redis-cache-data:/data
 
   scheduler:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     deploy:
       restart_policy:
         condition: on-failure
@@ -165,11 +185,13 @@ services:
       - bench
       - schedule
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
 
   websocket:
     image: frappe/erpnext:v15.29.4
+    networks:
+      - proxy
     deploy:
       restart_policy:
         condition: on-failure
@@ -177,12 +199,9 @@ services:
       - node
       - /home/frappe/frappe-bench/apps/frappe/socketio.js
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-
-volumes:
-  db-data:
-  redis-queue-data:
-  redis-cache-data:
-  sites:
-  logs:
+      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+  
+networks:
+  proxy:
+    external: true
