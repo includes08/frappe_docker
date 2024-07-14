@@ -22,6 +22,7 @@ services:
     # add redis_socketio for backward compatibility
     command:
       - >
+        echo "{}" > sites/common_site_config.json;
         ls -1 apps > /docker-data/erpnext/sites/apps.txt;
         bench set-config -g db_host $$DB_HOST;
         bench set-config -gp db_port $$DB_PORT;
