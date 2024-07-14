@@ -18,7 +18,7 @@ services:
       - proxy
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: none
     entrypoint:
       - bash
       - -c
@@ -48,7 +48,7 @@ services:
       - proxy
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: none
     volumes:
       - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
       - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
