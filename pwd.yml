@@ -9,8 +9,8 @@ services:
       restart_policy:
         condition: on-failure
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
 
   configurator:
     image: frappe/erpnext:v15.29.4
@@ -22,7 +22,7 @@ services:
     # add redis_socketio for backward compatibility
     command:
       - >
-        ls -1 apps > /docker-date/erpnext/sites/apps.txt;
+        ls -1 apps > /docker-data/erpnext/sites/apps.txt;
         bench set-config -g db_host $$DB_HOST;
         bench set-config -gp db_port $$DB_PORT;
         bench set-config -g redis_cache "redis://$$REDIS_CACHE";
@@ -36,16 +36,16 @@ services:
       REDIS_QUEUE: redis-queue:6379
       SOCKETIO_PORT: "9000"
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
 
   create-site:
     image: frappe/erpnext:v15.29.4
     networks:
       - proxy
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
     entrypoint:
       - bash
       - -c
@@ -55,18 +55,18 @@ services:
         wait-for-it -t 120 redis-cache:6379;
         wait-for-it -t 120 redis-queue:6379;
         export start=`date +%s`;
-        until [[ -n `grep -hs ^ /docker-date/erpnext/sites/common_site_config.json | jq -r ".db_host // empty"` ]] && \
-          [[ -n `grep -hs ^ /docker-date/erpnext/sites/common_site_config.json | jq -r ".redis_cache // empty"` ]] && \
-          [[ -n `grep -hs ^ /docker-date/erpnext/sites/common_site_config.json | jq -r ".redis_queue // empty"` ]];
+        until [[ -n `grep -hs ^ /docker-data/erpnext/sites/common_site_config.json | jq -r ".db_host // empty"` ]] && \
+          [[ -n `grep -hs ^ /docker-data/erpnext/sites/common_site_config.json | jq -r ".redis_cache // empty"` ]] && \
+          [[ -n `grep -hs ^ /docker-data/erpnext/sites/common_site_config.json | jq -r ".redis_queue // empty"` ]];
         do
-          echo "Waiting for /docker-date/erpnext/sites/common_site_config.json to be created";
+          echo "Waiting for /docker-data/erpnext/sites/common_site_config.json to be created";
           sleep 5;
           if (( `date +%s`-start > 120 )); then
-            echo "could not find /docker-date/erpnext/sites/common_site_config.json with required keys";
+            echo "could not find /docker-data/erpnext/sites/common_site_config.json with required keys";
             exit 1
           fi
         done;
-        echo "/docker-date/erpnext/sites/common_site_config.json found";
+        echo "/docker-data/erpnext/sites/common_site_config.json found";
         bench new-site --no-mariadb-socket --admin-password=admin --db-root-password=admin --install-app erpnext --set-default frontend;
 
   db:
@@ -88,7 +88,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: admin
     volumes:
-      - /docker-date/erpnext/db-data:/var/lib/mysql
+      - /docker-data/erpnext/db-data:/var/lib/mysql
 
   frontend:
     image: frappe/erpnext:v15.29.4
@@ -111,8 +111,8 @@ services:
       PROXY_READ_TIMEOUT: 120
       CLIENT_MAX_BODY_SIZE: 50m
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
 
   queue-long:
     image: frappe/erpnext:v15.29.4
@@ -127,8 +127,8 @@ services:
       - --queue
       - long,default,short
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
 
   queue-short:
     image: frappe/erpnext:v15.29.4
@@ -143,8 +143,8 @@ services:
       - --queue
       - short,default
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
 
   redis-queue:
     image: redis:6.2-alpine
@@ -154,7 +154,7 @@ services:
       restart_policy:
         condition: on-failure
     volumes:
-      - /docker-date/erpnext/redis-queue-data:/data
+      - /docker-data/erpnext/redis-queue-data:/data
 
   redis-cache:
     image: redis:6.2-alpine
@@ -164,7 +164,7 @@ services:
       restart_policy:
         condition: on-failure
     volumes:
-      - /docker-date/erpnext/redis-cache-data:/data
+      - /docker-data/erpnext/redis-cache-data:/data
 
   scheduler:
     image: frappe/erpnext:v15.29.4
@@ -177,8 +177,8 @@ services:
       - bench
       - schedule
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
 
   websocket:
     image: frappe/erpnext:v15.29.4
@@ -191,8 +191,8 @@ services:
       - node
       - /home/frappe/frappe-bench/apps/frappe/socketio.js
     volumes:
-      - /docker-date/erpnext/sites:/home/frappe/frappe-bench/sites
-      - /docker-date/erpnext/logs:/home/frappe/frappe-bench/logs
+      - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
+      - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
   
 networks:
   proxy:
