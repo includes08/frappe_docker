@@ -115,7 +115,7 @@ services:
       - /docker-data/erpnext/sites:/home/frappe/frappe-bench/sites
       - /docker-data/erpnext/logs:/home/frappe/frappe-bench/logs
     ports:
-      - "8080:8080"
+      - "8081:8080"
 
   queue-long:
     image: frappe/erpnext:v15.29.4
